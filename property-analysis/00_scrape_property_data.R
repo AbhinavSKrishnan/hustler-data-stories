@@ -32,6 +32,9 @@
     library(httr)
 
     library(RSelenium)
+    library(netstat)
+    library(selectr)
+    library(wdman)
   
   # ============== #
   # Set Parameters
@@ -68,6 +71,56 @@
     search_number <- "searchNumber="
 
 # =============================================================================
+# =============================== Section ====================================
+# =============================================================================
+
+    driver <- rsDriver(browser=c("chrome"))
+    remote_driver <- driver[["client"]]
+    remote_driver$open()
+    
+    library(wdman)
+    
+    # using wdman to start a selenium server
+    selServ <- selenium(
+      port = 8002L,
+      version = 'latest',
+      chromever = NULL
+    )
+    
+    # using RSelenium to start firefox on the selenium server
+    rD <- rsDriver(port = free_port(),
+                     browser = c("firefox"), # ugh so it only works with firefox, not chrome
+                     version = "latest",
+                     chromever = "latest",
+                     geckover = "latest",
+                     iedrver = NULL,
+                     phantomver = "2.1.1",
+                     verbose = TRUE,
+                     check = TRUE,
+                     extraCapabilities = list(acceptInsecureCerts = TRUE))
+    
+    remDr <- rD[["client"]]
+    
+    remDr$navigate(p_url_base)
+    
+    # Find agree disclaimer and click
+    remDr$findElement(using = "id", value = "AgreeDisclaimer")$clickElement()
+    # Search for Vanderbilt University
+    remDr$findElement(using = "id", value = "searchTerm")$sendKeysToElement(list("Vanderbilt University"))
+    
+    # Let page load
+    Sys.sleep(2)
+    
+    # Set page html code to object
+    page.source <- remDr$getPageSource()[[1]]
+    
+    listings <- read_html(page.source) %>% 
+      html_nodes("a")
+    
+    
+    
+    
+# =============================================================================
 # ======================== Scrape Property URLs =============================
 # =============================================================================
 
@@ -95,12 +148,17 @@
     # Spoof user agent
     page.spoof <- GET(test_url, add_headers('user-agent' = 'Property-Scraper ([[abhinav.s.krishnan@vanderbilt.edu]])'))
     
+    page.spoof <- GET("https://www.padctn.org/prc/#/search/1", 
+                      add_headers('user-agent' = 'Property-Scraper ([[abhinav.s.krishnan@vanderbilt.edu]])',
+                                  'X-Amzn-Trace-Id' = "Root=1-63f51eae-5e060f2645d955435548fda6"
+                                  )
+                      )
+    
     # Extract all hyperlinks from webpage
     page.html <- test_url %>% 
       read_html() %>% 
       html_elements('a') %>% # here, using the html class works better than trying to use the xpath
       html_attrs()
-    
 
     test_page <- "https://www.padctn.org/prc/property/236260/card/1/historical"
     
@@ -109,11 +167,4 @@
       html_elements('a') %>% # here, using the html class works better than trying to use the xpath
       html_attrs()
     
-# =============================================================================
-# =============================== RSelenium Approach ====================================
-# =============================================================================
-    driver <- rsDriver(browser=c("chrome"))
-    remote_driver <- driver[["client"]]
-    remote_driver$open()
-    
-    
+
