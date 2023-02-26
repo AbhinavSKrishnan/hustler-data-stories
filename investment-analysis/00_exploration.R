@@ -12,7 +12,6 @@
 
   # Analyze, explore, and visualize data on Vanderbilt's investment companies
 
-
   # ============== #
   # To-Do
   # ============== #
@@ -35,6 +34,9 @@
       # DONE - (try) Add horizontal gridlines (very light and thin)
       # DONE - REMOVE axis.ticks.x
       # Adjust margin below and to the right of caption
+
+    # February 20
+      # Patch Duke and Vanderbilt graphs next to each other
        
 # =============================================================================
 # ================================= Setup =====================================
@@ -48,19 +50,29 @@
   # ============== #
   
     library(data.table)
-    library(ggplot2)
     library(stringr)
-    library(gganimate)
+    library(purrr)
     library(forcats)
+
+    library(ggplot2)    
+    library(ggthemes)
+    library(gganimate)
+    library(gifski)
+    library(av)
+    library(ggiraph)
+    library(htmlwidgets)
     library(extrafont)
     library(waffle)
+    library(ggtext)
+    library(patchwork)
+    library(glue)
   
   # ============== #
   # Set Parameters
   # ============== #
   
     # set export toggle
-    p_export <- TRUE
+    p_export <- FALSE
     
     # set timestamp
     p_timestamp <- Sys.time()
@@ -84,6 +96,8 @@
     
     in_cpi <- as.data.table(read.csv("investment-analysis/raw-data/raw-CPIAUCSL.csv", fill = TRUE))
       # Source: St. Louis Fed
+    
+    in_fees_duke <- as.data.table(read.csv("investment-analysis/raw-data/raw-duke-Form990-PartIX-Line11f .csv", fill = TRUE))
     
   # ============== #
   # Ggplot stuff
@@ -130,21 +144,30 @@
     
     # Create custom plot save function
     custom_save <- function() {
-      if(p_export == TRUE) {ggsave(filename = temp.filename, device = "png", path = p_dir_graphics, width = 11.9, height = 7)}
+      if(p_export == TRUE) {ggsave(filename = temp.filename, device = "png", path = p_dir_graphics, width = 11.9, height = 7)
+      } else {warning("Plot Not Exported! Review p_export")}
     }
     
+    # dhmontgommery's color text function
+      # USED IN CONSOLE TO GENERATE SPAN TEXT TO USE 
+    generate_spantext <- function(color, label, bold = FALSE) {
+                          
+                          # tests for hex indicator, adds if missing
+                          color <- ifelse(str_starts(color, "#"), color, paste0("#", color))
+                          
+                          # creates spantext element after checking for bold face indicator
+                          spantext <- paste0(ifelse(bold == TRUE, "<b>", ""), "<span style = 'color:", color, "'>", label, "</span>", ifelse(bold == TRUE, "</b>"))
+                          
+                          return(spantext)
+                          
+                        }
 
+
+    
 # =============================================================================
 # Figure 2: Fees paid to investment managers
 # =============================================================================
 
-  # ============== #
-  # Processing
-  # ============== #
-  
-    # Rename columns with '.' to '_'
-    setnames(in_fees, colnames(in_fees), gsub("\\.", "_", colnames(in_fees)))
-    
     # Parse dollar signs and commas out of values
       # create new function for str_remove  
       remove_format <- function(x) {
@@ -154,11 +177,11 @@
         
         return(clean_comma)
       }
+    
+  # ============== #
+  # Processing - CPI
+  # ============== #
   
-    # Reclassify Investment_Management_Fees as numeric and remove monetary formatting
-    dt_fees <- in_fees[, c("Investment_Management_Fees", "Investment_Income") := list(as.numeric(remove_format(Investment_Management_Fees)), as.numeric(remove_format(Investment_Income)))]
-    
-    
     # Average CPI data for each calendar year
     for (year in seq(2000, 2020, 1)) {
       
@@ -169,7 +192,19 @@
     # Remove DATE and CPIAUCSL columns
     dt_cpi <- in_cpi[, c("DATE", "CPIAUCSL") := NULL]
     
+    # Remove duplicates (remnant from CPIAUCSL)
     dt_cpi_nodups <- unique(dt_cpi[Tax_Year %in% seq(2000, 2020, 1)], by = "Tax_Year")
+    
+  # ============== #
+  # Processing - Vanderbilt
+  # ============== #
+  
+    # Rename columns with '.' to '_'
+    setnames(in_fees, colnames(in_fees), gsub("\\.", "_", colnames(in_fees)))
+    
+    # Reclassify Investment_Management_Fees as numeric and remove monetary formatting
+    dt_fees <- in_fees[, c("Fees_NoFormat", "Income_NoFormat") := list(as.numeric(remove_format(Investment_Management_Fees)), as.numeric(remove_format(Investment_Income)))]
+    
     
     # Calculate inflation-adjusted management fees and investment income
       
@@ -177,11 +212,31 @@
       dt_merged <- merge(dt_fees, dt_cpi_nodups, by = "Tax_Year")
       
       # Calculate inflation-adjusted income and fees
-      dt_adjusted <- dt_merged[, c("Fees_Adjusted", "Income_Adjusted", "Notes") := list(Investment_Management_Fees/Avg_CPI, Investment_Income/Avg_CPI, NULL)]
+      dt_adjusted <- dt_merged[, c("Fees_Adjusted", "Income_Adjusted", "Notes") := list((Fees_NoFormat/Avg_CPI)*100, (Income_NoFormat/Avg_CPI)*100, NULL)]
     
       # Scale fees and income down by 1000 i.e. convert to integer thousands
-      dt_adjusted[, c("Fees_Scaled", "Income_Scaled") := list(Fees_Adjusted/1000, Income_Adjusted/1000)]
+      dt_adjusted[, c("Fees_Scaled", "Income_Scaled") := list(Fees_Adjusted/1000000, Income_Adjusted/1000000)]
       
+  # ============== #
+  # Processing - Duke
+  # ============== #
+    
+    # Rename columns with '.' to '_'
+    setnames(in_fees_duke, colnames(in_fees_duke), gsub("\\.", "_", colnames(in_fees_duke)))
+    
+    # Reclassify Investment_Management_Fees as numeric and remove monetary formatting
+    dt_fees_duke <- in_fees_duke[, c("Investment_Management_Fees", "Investment_Income") := list(as.numeric(remove_format(Investment_Management_Fees)), as.numeric(remove_format(Investment_Income)))]
+    
+    # Calculate inflation-adjusted management fees and investment income
+      # Merge fees data with cpi data
+      dt_merged_duke <- merge(dt_fees_duke, dt_cpi_nodups, by = "Tax_Year")
+      
+      # Calculate inflation-adjusted income and fees
+      dt_adjusted_duke <- dt_merged_duke[, c("Fees_Adjusted", "Income_Adjusted", "Notes") := list((Investment_Management_Fees/Avg_CPI)*100, (Investment_Income/Avg_CPI)*100, NULL)]
+      
+      # Scale fees and income down by 1000 i.e. convert to integer thousands
+      dt_adjusted_duke[, c("Fees_Scaled", "Income_Scaled") := list(Fees_Adjusted/1000000, Income_Adjusted/1000000)]
+    
   # ============== #
   # Visualization
   # ============== #
@@ -195,13 +250,13 @@
                     axis.title.y       = element_text(),
                     axis.line = element_line(linetype = 1),
                     axis.line.x = element_blank(),
-                    axis.text = element_text(family = "Arial Narrow"),
+                    axis.text = element_text(family = "Arial Narrow", size = 12),
                     
-                    plot.title        = element_text(face = "bold", size = 15, family = "Georgia", 
+                    plot.title        = element_text(face = "bold", size = 25, family = "Georgia", 
                                                      margin = margin(t = 5, b = 5, l = 10)),
-                    plot.subtitle     = element_text(color = "dark grey", size = 13, family = "Arial Narrow",
+                    plot.subtitle     = element_markdown(color = hex.grey, size = 17, family = "Arial Narrow",
                                                      margin = margin(b = 5, l = 10)),
-                    plot.caption      = element_text(color = "dark grey", vjust = -1, family = "Arial Narrow",
+                    plot.caption      = element_text(color = "dark grey", size = 10, vjust = -1, family = "Arial Narrow",
                                                      margin = margin(t = 5, b = 5)),
                     plot.background   = element_rect(fill = "#ffffff"),
                     plot.title.position = "plot",
@@ -217,97 +272,180 @@
                     legend.position   = c(0.2,0.1)
                   )
       
-    # Figure 2.1: Inflation-adjusted Fees paid to investment managers
+    # Figure 2.3.1: Mixed graph, same axis - Vanderbilt
     
       # set plot axis limits
-      x.min <- 2000
+      x.min <- 2008
       x.max <- 2021
       y.min <- 0
-      y.max <- 1500000
+      y.max <- 550
     
-    ggplot(dt_adjusted) + 
-      geom_col(aes(x = Tax_Year, y = Fees_Adjusted), fill = hex.blue.d) +
-      geom_rect(aes(xmin = 2000, xmax = 2008, ymin = y.min, ymax = y.max), fill = hex.grey, alpha = 0.01) +
-      geom_text(aes(x = 2004, y = (0.6*y.max), label = "No Data Available")) +
-      geom_vline(aes(xintercept = 2019.5), color = hex.gold.m) + 
-      geom_label(aes(x = 2019.5, y = (0.9*y.max), label = "Daniel Diermeier\nbecomes Chancellor")) +
-      # geom_col(aes(x = Tax_Year, y = Income_Adjusted), fill = hex.gold.l) +
-      scale_x_continuous(limits = c(x.min, x.max), breaks = seq(x.min, x.max, 1), expand = expansion(add = 2)) +
-      scale_y_continuous(limits = c(y.min, y.max), breaks = seq(y.min, y.max, (0.1*y.max)), minor_breaks = seq(y.min, y.max, (0.05*y.max))) + 
-      labs(
-        title = "Fees Paid to Vanderbilt's Investment Managers",
-        subtitle = "Inflation adjusted dollars",
-        caption = "Source: Vanderbilt IRS Form 990" # or maybe I say "Source: Internal Revenue Service"
-      ) +
-      ylab("Thousands of Dollars") +
-      bar.theme
+      # INTERACTIVE
+      plot.int.vandy <- ggplot(dt_adjusted[Tax_Year %in% seq(2008, 2020, 1)]) + 
+        geom_rect(aes(xmin = 2008, xmax = 2019, ymin = y.min, ymax = y.max), fill = hex.grey, alpha = 0.005) +
+        geom_rect(aes(xmin = 2019, xmax = x.max, ymin = y.min, ymax = y.max), fill = hex.gold.d, alpha = 0.005) +
+        
+        geom_vline(aes(xintercept = 2019), color = hex.black) + 
+        # geom_text(aes(x = 2019.5, y = (1*y.max), label = "Daniel Diemeier\nbecomes Chancellor", color = "#fffffff")) +
+        
+        # geom_text(aes(x = 2008.5, y = (1*y.max), label = "Chancellor Zeppos"), family = "Arial Narrow") +
+        # geom_text(aes(x = 2019, y = (1*y.max), label = "Chancellor Diemeier")) +
+        
+        geom_col_interactive(aes(x = Tax_Year, y = Income_Scaled, tooltip = Investment_Income), fill = hex.gold.m) +
+        geom_col_interactive(aes(x = Tax_Year, y = Fees_Scaled, tooltip = Investment_Management_Fees), 
+                             fill = hex.blue.d, width = 0.5, just = 0.1) +
+        
+        
+        scale_x_continuous(limits = c(x.min, x.max), breaks = seq(x.min, x.max, 1), expand = expansion(add = 1)) +
+        scale_y_continuous(limits = c(y.min, y.max), breaks = seq(y.min, y.max, (50)), minor_breaks = seq(y.min, y.max, (10)), expand = expansion(mult = c(0, 0.05))) + 
+        labs(
+          title = glue("Investment Management <b><span style = 'color:#0D3847'>Fees</span></b> and <b><span style = 'color:#DDBB63'>Income</span></b>"),
+          subtitle = "Investment management fees increased dramatically in 2019",
+          caption = "Source: ProPublica’s Nonprofit Explorer" # or maybe I say "Source: Internal Revenue Service"
+        ) +
+        ylab("Inflation Adjusted Dollars\n(millions)") +
+        bar.theme + 
+          theme(
+            panel.grid.minor.x = element_blank(),
+            panel.grid.minor.y = element_line(color = "grey", linewidth = 0.075, linetype = 1),
+            panel.grid.major.x = element_blank(),
+            title = element_markdown()
+          )
+    
+      # Convert to interactive girafe object  
+      expenses.vandy <- girafe(ggobj = plot.int.vandy, width_svg = 11.9, height_svg = 7) %>%
+        girafe_options(
+          opts_hover_inv(css = "opacity:0.1;"), # makes other interactive geoms disappear upon hover
+          opts_hover(css = "fill:#696E7A")
+        )
       
-    temp.filename <- "year_fees_adjusted"
+      expenses.vandy
+      
+      # Save as html file
+      htmlwidgets::saveWidget(expenses.vandy, "invst_expenses_vandy.html", selfcontained = TRUE)
+      
     
-    custom_save()
+    # STATIC
+      ggplot(dt_adjusted[Tax_Year %in% seq(2008, 2020, 1)]) + 
+        geom_rect(aes(xmin = 2008, xmax = 2019, ymin = y.min, ymax = y.max), fill = hex.grey, alpha = 0.005) +
+        geom_rect(aes(xmin = 2019, xmax = x.max, ymin = y.min, ymax = y.max), fill = hex.gold.d, alpha = 0.005) +
+        
+        geom_vline(aes(xintercept = 2019), color = hex.black) + 
+        
+        # geom_text(aes(x = 2008.5, y = (1*y.max), label = "Chancellor Zeppos"), family = "Arial Narrow") +
+        # geom_text(aes(x = 2019, y = (1*y.max), label = "Chancellor Diemeier")) +
+        
+        geom_col(aes(x = Tax_Year, y = Income_Scaled), fill = hex.gold.m) +
+        geom_col(aes(x = Tax_Year, y = Fees_Scaled), fill = hex.blue.d) +
+        
+        scale_x_continuous(limits = c(x.min, x.max), breaks = seq(x.min, x.max, 1), expand = expansion(add = 1)) +
+        scale_y_continuous(limits = c(y.min, y.max), breaks = seq(y.min, y.max, (50)), minor_breaks = seq(y.min, y.max, (10)), expand = expansion(mult = c(0, 0.05))) + 
+        labs(
+          title = "Vanderbilt's Investment Expenses",
+          subtitle = "Income received from investments and fees paid to investment managers", # use glue() to color-code
+          caption = "Source: ProPublica’s Nonprofit Explorer" # or maybe I say "Source: Internal Revenue Service"
+        ) +
+        ylab("Inflation Adjusted Dollars\n(millions)") +
+        bar.theme + 
+        theme(
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_line(color = "grey", linewidth = 0.075, linetype = 1),
+          panel.grid.major.x = element_blank(),
+          title = element_markdown()
+        )
+      
+      temp.filename <- "income_fees_combined_vandy"
+      
+      custom_save()
     
-    # Figure 2.2: Inflation-adjusted Investment Income
+    # Figure 2.3.1: Mixed graph, same axis - Duke
     
       # set plot axis limits
-      x.min <- 2000
+      x.min <- 2008
       x.max <- 2021
       y.min <- 0
-      y.max <- 5500000
-    
-    ggplot(dt_adjusted) + 
-      # geom_col(aes(x = Tax_Year, y = Fees_Adjusted), fill = hex.blue.d) +
-      geom_col(aes(x = Tax_Year, y = Income_Adjusted), fill = hex.gold.l) +
-      geom_vline(aes(xintercept = 2019.5), color = hex.gold.m) + 
-      geom_label(aes(x = 2019.5, y = (0.9*y.max), label = "Daniel Diermeier\nbecomes Chancellor")) +
-      scale_x_continuous(limits = c(x.min, x.max), breaks = seq(x.min, x.max, 1), expand = expansion(add = 2)) +
-      scale_y_continuous(limits = c(y.min, y.max), breaks = seq(y.min, y.max, (0.1*y.max)), minor_breaks = seq(y.min, y.max, (0.05*y.max))) + 
-      labs(
-        title = "Vanderbilt's Investment Income",
-        subtitle = "Inflation adjusted dollars",
-        caption = "Source: Vanderbilt IRS Form 990" # or maybe I say "Source: Internal Revenue Service"
-      ) +
-      ylab("Thousands of Dollars") +
-      bar.theme
-    
-    temp.filename <- "year_income_adjusted"
-    
-    custom_save()
-    
-    # Figure 2.3: Mixed graph, same axis
-    ggplot(dt_adjusted) + 
-      geom_col(aes(x = Tax_Year, y = Income_Adjusted), fill = hex.gold.l) +
-      geom_col(aes(x = Tax_Year, y = Fees_Adjusted), fill = hex.blue.d) +
-      scale_x_continuous(limits = c(2000, 2021), breaks = seq(2000, 2021, 1), expand = expansion(add = 2)) +
-      scale_y_continuous(limits = c(0, 6), breaks = seq(0, 6, 0.1), minor_breaks = seq(0, 6, 0.05)) + 
-      labs(
-        title = "Vanderbilt's Investment Expenses",
-        subtitle = "Inflation adjusted dollars",
-        caption = "Source: Vanderbilt IRS Form 990" # or maybe I say "Source: Internal Revenue Service"
-      ) +
-      ylab("Millions of Dollars") +
-      bar.theme
-    
-    temp.filename <- "income_fees_combined"
-    
-    custom_save()
-    
-    # Figure 2.4: Mixed graph, separate axes - INCOMPLETE
-    ggplot(dt_adjusted) + 
-      geom_col(aes(x = Tax_Year, y = Income_Adjusted), fill = hex.gold.l) +
-      geom_col(aes(x = Tax_Year, y = Fees_Adjusted), fill = hex.blue.d) +
-      scale_x_continuous(limits = c(2000, 2021), breaks = seq(2000, 2021, 1), expand = expansion(add = 2)) +
-      scale_y_continuous(name = "First Axis", sec.axis = sec_axis(trans = ~./5, name = "Second Axis"), limits = c(0, 6), breaks = seq(0, 6, 0.1), minor_breaks = seq(0, 6, 0.05)) + 
-      labs(
-        title = "Fees Paid to Vanderbilt's Investment Managers",
-        subtitle = "Inflation adjusted dollars",
-        caption = "Source: Vanderbilt IRS Form 990" # or maybe I say "Source: Internal Revenue Service"
-      ) +
-      ylab("Millions of Dollars") +
-      bar.theme
-    
-    temp.filename <- "income_fees_combined_diffaxis"
-    
-    custom_save()
+      y.max <- 750
+      
+      # INTERACTIVE
+      plot.int.duke <- ggplot(dt_adjusted_duke[Tax_Year %in% seq(2008, 2020, 1)]) + 
+        # geom_rect(aes(xmin = 2008, xmax = 2019, ymin = y.min, ymax = y.max), fill = hex.grey, alpha = 0.005) +
+        # geom_rect(aes(xmin = 2019, xmax = x.max, ymin = y.min, ymax = y.max), fill = hex.gold.d, alpha = 0.005) +
+        
+        # geom_vline(aes(xintercept = 2019), color = hex.black) + 
+        # geom_text(aes(x = 2019.5, y = (1*y.max), label = "Daniel Diemeier\nbecomes Chancellor", color = "#fffffff")) +
+        
+        # geom_text(aes(x = 2008.5, y = (1*y.max), label = "Chancellor Zeppos"), family = "Arial Narrow") +
+        # geom_text(aes(x = 2019, y = (1*y.max), label = "Chancellor Diemeier")) +
+        
+        geom_col_interactive(aes(x = Tax_Year, y = Income_Scaled, tooltip = Investment_Income), fill = hex.gold.m) +
+        geom_col_interactive(aes(x = Tax_Year, y = Fees_Scaled, tooltip = Investment_Management_Fees), fill = hex.blue.d) +
+        
+        scale_x_continuous(limits = c(x.min, x.max), breaks = seq(x.min, x.max, 1), expand = expansion(add = 1)) +
+        scale_y_continuous(limits = c(y.min, y.max), breaks = seq(y.min, y.max, (50)), minor_breaks = seq(y.min, y.max, (10)), expand = expansion(mult = c(0, 0.05))) + 
+        labs(
+          title = "Duke's Investment Expenses",
+          subtitle = glue("<b><span style = 'color:#DDBB63'>Income</span></b> received from investments and <b><span style = 'color:#0D3847'>fees</span></b> paid to external investment managers"),
+          caption = "Source: ProPublica’s Nonprofit Explorer" # or maybe I say "Source: Internal Revenue Service"
+        ) +
+        ylab("Inflation Adjusted Dollars\n(millions)") +
+        bar.theme + 
+        theme(
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_line(color = "grey", linewidth = 0.075, linetype = 1),
+          panel.grid.major.x = element_blank(),
+          title = element_markdown()
+        )
+      
+      # Convert to interactive girafe object  
+      expenses.duke <- girafe(ggobj = plot.int.duke, width_svg = 11.9, height_svg = 7) %>%
+        girafe_options(
+          opts_hover_inv(css = "opacity:0.1;"), # makes other interactive geoms disappear upon hover
+          opts_hover(css = "fill:#696E7A") # 
+        )
+      
+      # Save as html file
+      htmlwidgets::saveWidget(expenses.duke, "invst_expenses_duke.html", selfcontained = TRUE)
+      
+      # Create combined graph
+      expenses.combined <- girafe(ggobj = plot.int.vandy / plot.int.duke, width_svg = 11.9, height_svg = 7) %>%
+        girafe_options(
+          opts_hover_inv(css = "opacity:0.1;"), # makes other interactive geoms disappear upon hover
+          opts_hover(css = "fill:#696E7A") # 
+        )
+      
+      
+      
+      # STATIC 
+      ggplot(dt_adjusted_duke[Tax_Year %in% seq(2008, 2020, 1)]) + 
+        # geom_rect(aes(xmin = 2008, xmax = 2019, ymin = y.min, ymax = y.max), fill = hex.grey, alpha = 0.005) +
+        # geom_rect(aes(xmin = 2019, xmax = x.max, ymin = y.min, ymax = y.max), fill = hex.gold.d, alpha = 0.005) +
+        
+        # geom_vline(aes(xintercept = 2019), color = hex.black) + 
+        
+        # geom_text(aes(x = 2008.5, y = (1*y.max), label = "Chancellor Zeppos"), family = "Arial Narrow") +
+        # geom_text(aes(x = 2019, y = (1*y.max), label = "Chancellor Diemeier")) +
+        
+        geom_col(aes(x = Tax_Year, y = Income_Scaled), fill = "#FFD960") +
+        geom_col(aes(x = Tax_Year, y = Fees_Scaled), fill = "#012169") +
+        scale_x_continuous(limits = c(x.min, x.max), breaks = seq(x.min, x.max, 1), expand = expansion(add = 1)) +
+        scale_y_continuous(limits = c(y.min, y.max), breaks = seq(y.min, y.max, (50)), minor_breaks = seq(y.min, y.max, (10)), expand = expansion(mult = c(0, 0.05))) + 
+        labs(
+          title = "Duke's Investment Expenses",
+          subtitle = "Income received from investments and fees paid to investment managers",
+          caption = "Source: ProPublica’s Nonprofit Explorer" # or maybe I say "Source: Internal Revenue Service"
+        ) +
+        ylab("Inflation Adjusted Dollars\n(millions)") +
+        bar.theme + 
+        theme(
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_line(color = "grey", linewidth = 0.075, linetype = 1),
+          panel.grid.major.x = element_blank(),
+          title = element_markdown()
+        )
+      
+      temp.filename <- "income_fees_combined_duke"
+      
+      custom_save()
     
     
 # =============================================================================
@@ -511,9 +649,7 @@
                   )
                     
 
-# =============================================================================
-# =============================== Export ====================================
-# =============================================================================
 
     # NOTE: exporting graphs is handled individually immediately after generation
     
+
