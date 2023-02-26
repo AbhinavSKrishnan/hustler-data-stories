@@ -41,13 +41,15 @@
     library(gganimate)
     library(gifski)
     library(av)
+    library(ggiraph)
+    library(htmlwidgets)
   
   # ============== #
   # Set Parameters
   # ============== #
   
     # set export toggle
-    p_export <- T
+    p_export <- F
     
     # set timestamp
     p_timestamp <- Sys.time()
@@ -76,8 +78,10 @@
     # create a function to import datasets, reshape, and output
     import.shape <- function(in_data){
       
+      # Read csv and create datatable object
       temp_data <- as.data.table(read.csv(in_data))
       
+      # Melt long
       long_data <- melt(temp_data, 
                         measure.vars = c(paste0("X", seq(2011, 2022, 1))), 
                         variable.name = "Year", value.name = "Percentage")
@@ -99,7 +103,7 @@
           v.nonwhite <- c("Black", "Hispanic", "American Indian", "Asian/Pacific Islander", "Two or More Races")
             # NOTE: Biracial students were added to the nonwhite category since they would be at most 50% white
         
-        long_data[, "Race Category" := factor(ifelse(Race == "White", "White", 
+        long_data[, "Race_Category" := factor(ifelse(Race == "White", "White", 
                                            ifelse(Race == "International", "International", 
                                                   ifelse(Race %in% v.nonwhite, "Nonwhite", "Unknown"))), levels = c("White", "Nonwhite", "International", "Unknown"))]
       
@@ -117,11 +121,14 @@
     race.firstyear <- ls_in_data$`er-firstyear.csv`
     
     # Create a new datatable with the sum of Race Categories
-    race.ugp.category <- race.ugp[, sum(Percentage), by = list(Type, Year, `Race Category`)]
-    setnames(race.ugp.category, "V1", "Total Percentage")
+    race.ugp.category <- race.ugp[, sum(Percentage), by = list(Type, Year, Race_Category)]
+    setnames(race.ugp.category, "V1", "Total_Percentage")
+    
+    # Create Total_Percentage character column
+    race.ugp.category[, str_Total_Percentage := paste0(Total_Percentage, "%")]
     
     # Set levels of race category variable
-    levels(race.ugp.category[, `Race Category`])
+    levels(race.ugp.category[, Race_Category])
     
     # placeholder variable
     race.firstyear[, Empty := NA]
@@ -160,10 +167,10 @@
                   legend.position = c(0.9,0.8)
                 )
     
-    # Create graph for ug racial composition plot
-        ggplot(data = race.ugp.category[Type == "Undergraduate" & `Race Category` != "Unknown"], mapping = aes(x = Year, y = `Total Percentage`, color = `Race Category`)) + 
+    # Create graph for ug racial composition plot - STATIC
+      race.ugp.interactive <- ggplot(data = race.ugp.category[Type == "Undergraduate" & `Race_Category` != "Unknown"], mapping = aes(x = Year, y = `Total_Percentage`, color = `Race_Category`)) + 
         geom_point() + 
-        geom_line(aes(group = `Race Category`)) + 
+        geom_line(aes(group = `Race_Category`)) + 
         scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) + 
         scale_color_manual(values = c("#DDBB63", "#000000", "#8E6600")) +
         labs(
@@ -174,9 +181,30 @@
         ylab("Percentage") +
         xlab("Academic Year") +
         base.theme
+      
+    # Create graph for ug racial composition plot - INTERACTIVE
+      race.ugp.interactive <- ggplot(data = race.ugp.category[Type == "Undergraduate" & Race_Category != "Unknown"], mapping = aes(x = Year, y = `Total_Percentage`, color = Race_Category)) + 
+                              geom_point_interactive(aes(tooltip = str_Total_Percentage)) + 
+                              geom_line(aes(group = Race_Category)) + 
+                              scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) + 
+                              scale_color_manual(values = c("#DDBB63", "#000000", "#8E6600")) +
+                              labs(
+                                title = "Change in Racial Composition of Undergraduate Students",
+                                subtitle = "Students with unknown race are not included",
+                                caption = "Source: Vanderbilt Office for Equity, Diversity, and Inclusion"
+                              ) +
+                              ylab("Percentage") +
+                              xlab("Academic Year") +
+                              base.theme
     
+      race.Widget <- girafe(ggobj = race.ugp.interactive, width_svg = 11.9, height_svg = 7) %>%
+                    girafe_options(opts_hover(css = "fill:;"))
+      
+      htmlwidgets::saveWidget(race.Widget, "my_widget_page.html", 
+                              selfcontained = TRUE)
+      
     # Create an a graph for firstyear racial composition plot
-        ggplot(data = race.firstyear[`Race Category` != "Unknown"], mapping = aes(x = Year, y = `Percentage`, color = Race)) + 
+        ggplot(data = race.firstyear[Race_Category != "Unknown"], mapping = aes(x = Year, y = Percentage, color = Race)) + 
         geom_point() + 
         geom_line(aes(group = `Race`)) + 
         scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) + 
@@ -192,7 +220,7 @@
     
     # Create an animated graph
         
-    anim.firstyear <- ggplot(race.firstyear[`Race Category` != "Unknown" & Race != "Race Unknown"]) +
+    anim.firstyear <- ggplot(race.firstyear[`Race_Category` != "Unknown" & Race != "Race Unknown"]) +
                   geom_col(aes(x = Empty, y = Percentage, fill = Race), position = "fill") +
                   # scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) + 
                   labs(
