@@ -1,0 +1,1 @@
+jQuery(function(){appBannersConfig=appBannersConfig||{},jQuery.smartbanner(appBannersConfig),jQuery(".sb-close").click(function(){jQuery("#smartbanner").css("display","none")})});

@@ -1,0 +1,271 @@
+/*
+Theme Name: #ANCHORDOWN Vanderbilt
+Theme URI: http://web.vanderbilt.edu/wordpress/
+Description: WordPress theme for Vanderbilt University site hosted on WP0. (last updated 01-24-2019 by LP)
+Version: 5.02
+Author: Vanderbilt University Division of Communications, Digital Strategies Team
+Author URI: http://web.vanderbilt.edu/
+*/
+
+/** CaeciliaLtPro **/
+@font-face {
+    font-family: "Caecilia LT Std";
+    src: url('https://cdn.vanderbilt.edu/vu-www4/omni/fonts/CaeciliaLTPro/caecilialtpro-46lightitalic.eot');
+    src: url('https://cdn.vanderbilt.edu/vu-www4/omni/fonts/CaeciliaLTPro/caecilialtpro-46lightitalic.eot?#iefix') format('embedded-opentype')
+    ,url('https://cdn.vanderbilt.edu/vu-www4/omni/fonts/CaeciliaLTPro/caecilialtpro-46lightitalic.woff2') format('woff2')
+    ,url('https://cdn.vanderbilt.edu/vu-www4/omni/fonts/CaeciliaLTPro/caecilialtpro-46lightitalic.woff') format('woff')
+    ,url('https://cdn.vanderbilt.edu/vu-www4/omni/fonts/CaeciliaLTPro/caecilialtpro-46lightitalic.ttf') format('truetype');
+}
+
+/* Captions */
+#maincontent figure, .wp-caption { font-size: 0.85em; line-height: 1.5em; padding: 10px 0px; margin: 0;  background: none; border: 0; }
+#maincontent figure img, .wp-caption img { margin: 0;	padding: 0;	border: 0 none; }
+figcaption, .wp-caption-text { padding: 5px; background: #FFF; color: #555; border-bottom: 1px dotted #CCC; text-align: left !important;  }
+#maincontent figure.alignright { border-left: 1px dotted #CCC !important; margin-left: 25px; float: right; border: 0 !important;}
+#maincontent figure.alignleft { border-right: 1px dotted #CCC !important; margin-right: 35px; float: left; border: 0 !important;}
+#maincontent figure.alignnone, #maincontent figure.aligncenter { margin: 0 auto !important; }
+
+/* Begin Images */
+p img {
+    padding: 0;
+    max-width: 100%;
+}
+
+img.centered {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+img.alignright {
+    padding: 4px;
+    margin: 0 0 2px 7px;
+    display: inline;
+}
+
+img.alignleft {
+    padding: 4px;
+    margin: 0 7px 2px 0;
+    display: inline;
+}
+
+.alignright {
+    float: right;
+}
+
+.alignleft {
+    float: left;
+}
+
+/* Captions */
+.aligncenter,
+div.aligncenter {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.wp-caption {
+    border: 1px solid #ddd;
+    text-align: center;
+    background-color: #f3f3f3;
+    padding-top: 4px;
+    margin: 10px;
+    -moz-border-radius: 3px;
+    -khtml-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    border-radius: 3px;
+}
+
+.wp-caption img {
+    margin: 0;
+    padding: 0;
+    border: 0 none;
+}
+
+.wp-caption p.wp-caption-text {
+    font-size: 11px;
+    line-height: 17px;
+    padding: 0 4px 5px;
+    margin: 0;
+}
+
+#secnav .rssblack {
+    background: #222;
+    margin-top: 0 !important;
+    color: #EEE;
+}
+
+#secnav .rssblack p,
+#secnav .rssblack li {
+    color: #EEE !important;
+}
+
+#secnav .rssblack p a,
+#secnav .rssblack li a {
+    border-bottom: 1px dotted #666;
+    color: #D8AB4C;
+}
+
+#secnav .rssblack li a:hover {
+    background: #333;
+    color: #FFF;
+}
+
+h4#hidetitle {
+    display: none;
+}
+
+div.tagcloud,
+div#calendar_wrap {
+    padding: 10px 20px;
+}
+
+.tagcloud a:link,
+.tagcloud a:visited {
+    color: #555;
+    text-decoration: none;
+    border-bottom: 1px dotted #666;
+}
+
+.tagcloud a:hover {
+    color: #999;
+}
+
+.DOS-caecilia-font {
+    font-family: "Caecilia LT Std", "Source Sans Pro", sans-serif !important;
+}
+
+.gallery {
+    margin: 0 auto 18px;
+}
+
+.gallery:after{
+    content: " ";
+    display: block;
+    clear:both;
+}
+
+.gallery .gallery-item {
+    float: left;
+    margin-top: 0;
+    text-align: center;
+    width: 33%;
+    margin-bottom: 2rem;
+}
+
+.gallery-columns-1 .gallery-item {
+    width: 100%;
+}
+
+.gallery-columns-2 .gallery-item {
+    width: 50%;
+}
+
+.gallery-columns-3 .gallery-item {
+    width: 33%;
+}
+
+.gallery-columns-4 .gallery-item {
+    width: 25%;
+}
+
+.gallery-columns-5 .gallery-item {
+    width: 20%;
+}
+
+.gallery img {
+    padding: 4px;
+    background: #fff;
+}
+
+.gallery img:hover {
+    background: white;
+}
+
+.gallery-columns-2 .attachment-medium {
+    max-width: 92%;
+    height: auto;
+}
+
+.gallery-columns-4 .attachment-thumbnail {
+    max-width: 84%;
+    height: auto;
+}
+
+.gallery .gallery-caption {
+    color: #888;
+    font-size: 12px;
+    margin: 0 0 12px;
+}
+
+.gallery dl,
+.gallery dt {
+    margin: 0;
+}
+
+.gallery br+br {
+    display: none;
+}
+
+.gallery-columns-2 .gallery-item:nth-child(odd),
+.gallery-columns-3 .gallery-item:nth-child(3n+1),
+.gallery-columns-4 .gallery-item:nth-child(4n+1),
+.gallery-columns-5 .gallery-item:nth-child(5n+1){
+    clear:both;
+}
+
+/*** Current Right Sidebar Menu ***/
+ul.hidden-print li.current_page_item a {
+    background: #eee !important;
+    border-right: solid #fff;
+    /*color: #d8ab4c;*/
+}
+
+/* Make sure that user added images are responsive */
+article img[class^="wp-image-"],
+article img[class*=" wp-image-"] {
+	max-width: 100%;
+	height: auto;
+}
+
+/* HERO SHORTCODE */
+
+.vuheroimage {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    color: #FFF !important;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.vuheroimage:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-image: linear-gradient(to bottom right,#002f4b,#222);
+    opacity: .4;
+}
+
+.vuheroimage h3 {
+    padding-top: 200px;
+    font-size: 2.5em !important;
+    font-weight: 500;
+    text-align: center;
+    color: #FFF !important;
+    text-shadow: 2px 2px #444;
+}
+
+@media only screen and (max-width: 500px) {
+    .vuheroimage h3 {
+        padding-top: 20px;
+        font-size: 2em !important;
+    }
+}

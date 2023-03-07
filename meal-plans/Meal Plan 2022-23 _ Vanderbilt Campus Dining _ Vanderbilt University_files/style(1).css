@@ -1,0 +1,50 @@
+/*
+ Theme Name:     #ANCHORDOWN Child - Campus Dining
+ Description:    Campus Dining
+ Author:         Vanderbilt Digital Strategies
+ Author URI:     http://web.vanderbilt.edu
+ Template:       ANCHORDOWN-Vanderbilt
+ Version:        1.0.0
+*/
+
+#dining-facility-wrapper {
+	margin-bottom: 2em;
+}
+.dining-facility h6 {
+	margin-bottom: 0;
+}
+.dining-facility p {
+    font-size: 1rem;
+    line-height: 1.2em;
+    margin: 10px 0;
+}
+.dining-facility .capacity-chart-wrapper {
+	width: 100%;
+	height: 50px;
+	float: left;
+	background-color: #DDD;
+}
+.dining-facility .capacity-chart-wrapper .capacity-chart-metric {
+	height: 50px;
+	float: left;
+}
+.dining-facility .capacity-chart-wrapper .capacity-chart-metric.high-percentage {
+	background-color: #D80A0D;
+}
+.dining-facility .capacity-chart-wrapper .capacity-chart-metric.medium-percentage {
+	background-color: #FAF024;
+}
+.dining-facility .capacity-chart-wrapper .capacity-chart-metric.low-percentage {
+	background-color: #0CBA22;
+}
+.dining-facility .capacity-chart-wrapper .capacity-chart-metric span {
+	display: inline-block;
+	color: #fff;
+	font-size: 30px;
+	line-height: 1em;
+	padding: 10px;
+	font-weight: 500;
+}
+.dining-facility .capacity-chart-wrapper .capacity-chart-metric.medium-percentage span {
+	color: #000;
+}
