@@ -252,7 +252,7 @@
                     axis.line.x = element_blank(),
                     axis.text = element_text(family = "Arial Narrow", size = 12),
                     
-                    plot.title        = element_text(face = "bold", size = 25, family = "Georgia", 
+                    plot.title        = element_markdown(size = 25, family = "Georgia", 
                                                      margin = margin(t = 5, b = 5, l = 10)),
                     plot.subtitle     = element_markdown(color = hex.grey, size = 17, family = "Arial Narrow",
                                                      margin = margin(b = 5, l = 10)),
@@ -299,7 +299,7 @@
         scale_x_continuous(limits = c(x.min, x.max), breaks = seq(x.min, x.max, 1), expand = expansion(add = 1)) +
         scale_y_continuous(limits = c(y.min, y.max), breaks = seq(y.min, y.max, (50)), minor_breaks = seq(y.min, y.max, (10)), expand = expansion(mult = c(0, 0.05))) + 
         labs(
-          title = glue("Investment Management <b><span style = 'color:#0D3847'>Fees</span></b> and <b><span style = 'color:#DDBB63'>Income</span></b>"),
+          title = glue("Investment <b><span style = 'color:#DDBB63'>income</span></b> and external investment management <b><span style = 'color:#0D3847'>fees</span></b>"),
           subtitle = "Investment management fees increased dramatically in 2019",
           caption = "Source: ProPublica’s Nonprofit Explorer" # or maybe I say "Source: Internal Revenue Service"
         ) +
@@ -402,6 +402,8 @@
           opts_hover_inv(css = "opacity:0.1;"), # makes other interactive geoms disappear upon hover
           opts_hover(css = "fill:#696E7A") # 
         )
+      
+      expenses.duke
       
       # Save as html file
       htmlwidgets::saveWidget(expenses.duke, "invst_expenses_duke.html", selfcontained = TRUE)
