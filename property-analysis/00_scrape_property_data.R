@@ -113,7 +113,7 @@
       # Navigate to test url
       remDr$navigate(url.listing)
       
-      Sys.sleep(1)
+      Sys.sleep(0.5)
       
       # Scrape page source code
       page.source <- remDr$getPageSource()[[1]]
@@ -171,9 +171,10 @@
       # Create url for current page of listings
       landing.page <- paste0(p_url_base, "/prc/#/search/")
       
+      # Navigate to landing page
       remDr$navigate(landing.page)
       
-      # Let page load for two seconds
+      # Let page load for one second
       Sys.sleep(1)
       
       # Find agree disclaimer and click Agree
@@ -181,29 +182,37 @@
         # Navigates to: https://www.padctn.org/prc/#/search/1
         
       # Search for Vanderbilt University
-      remDr$findElement(using = "id", value = "searchTerm")$sendKeysToElement(list("Vanderbilt University"))
+      # remDr$findElement(using = "id", value = "searchTerm")$sendKeysToElement(list("Vanderbilt University"))
         # Navigates to: https://www.padctn.org/prc/#/search/1?searchType=owner&searchTerm=Vanderbilt%20University&searchNumber=
         # This code has been made defunct by including the search type and search term in the url and accessing the page directly
         
     # ============== #
-    # Create vector of all 
+    # Create vector of all pages
     # ============== #
   
+      # Create empty vector
+      v.urls.holding <- c()  
       
-      
-      # Create empty datatable
-      dt.page.holding <- data.table()
-      ls.page.holding <- list()
-      
-      
-      # Loop through the index of pages
+      # loop through each index and create list of urls
       for (i in 1:10) {
+        # NOTE: If the number of pages change, this method is no longer robust. 
+        # May need to scrape the number of pages from the website to pass to for loop index
         
         # Create url for current page of listings
         current.page <- paste0(p_url_base, "/prc/#/search/", i, "?searchType=owner&searchTerm=Vanderbilt University&searchNumber=")
         
-        remDr$navigate(current.page)
+        # Add url to holding vector
+        v.urls.holding <- c(v.urls.holding, current.page)
         
+      }
+      
+      # Create empty list
+      ls.page.holding <- list()
+      
+      # Loop through the index of pages
+      for (page in v.urls.holding) {
+        
+        remDr$navigate(page)
         Sys.sleep(1)
         
         # Set page source code to object
@@ -219,22 +228,32 @@
         listing.links <- listings[listings %like% 'VANDERBILT']
         
         # Extract link suffix using position of characters
-        # WARNING: NOT A ROBUST METHOD
-        link.suffixes <- str_sub(listing.links, 10, 36)
+          # link.suffixes <- str_sub(listing.links, 10, 35)
+        
+          # WARNING: POSITIONAL REFERENCES ARE NOT A ROBUST METHOD
+            # This method has become a problem, because the link suffixes are inconsistently formatted. 
+            # Some properties have 6 digit codes while others have 5 digit codes. This causes the positional reference to fail at times
+            # Lets write a regex for these suffixes:
+              # regex: /prc/property/(\\d{5,6})/card/1
+        
+        # Extract link suffix using regular expression
+        link.suffixes <- str_extract(listing.links, "/prc/property/(\\d{5,6})/card/1")
         
         # Loop through link suffixes to scrape filings on current page
         for (suffix in link.suffixes) {
           
+          # Pass the suffix to the scrape_page function
           temp.dt <- scrape_page(suffix)
           
+          # assign each datatable of parsed data to a list item
           ls.page.holding[[suffix]] <- temp.dt
-          # dt.page.holding <- rbind(dt.page.holding, temp.dt, fill = TRUE)
           
         }
         
       }
-    
-      # https://www.padctn.org/prc/property/108003/card/#/search/1
+      
+      # Convert list to datatable for faster vectorized operations
+      dt.page.holding <- as.data.table(rbindlist(ls.page.holding))
       
     # Add Latitude and Longitude data
     dt.geocodes <- geocode(dt.page.holding,
@@ -243,32 +262,6 @@
                           full_results = FALSE # Disabling this feature increases the search speed
                           )
     
-    # listing.links[, link_suffix := str_sub(.SD, "(?<=href=){28}"), .SDcols = c("full_element")]
-    
-    
-    test_listing <- listings[[65]]
-    
-    remDr$navigate(listings[[65]])
-    
-    
-    
-# =============================================================================
-# ======================== Scrape Property URLs =============================
-# =============================================================================
-
-    # Okay so this section needs to go through each page of the search for Vanderbilt and scrape the urls for each property record
-    
-    # For loop for recursive search
-    
-    # set number of search pages
-    n_pages <- c(10)
-    
-    for (i in 1:n_pages) {
-      
-      page_url <- paste0(p_)
-      
-      
-    }
     
     
 # =============================================================================
