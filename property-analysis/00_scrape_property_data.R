@@ -39,6 +39,7 @@
 
     library(sf)
     library(tidygeocoder)
+    library(jsonlite)
   
   # ============== #
   # Set Parameters
@@ -51,10 +52,10 @@
     p_timestamp <- Sys.time()
     
     # set output directory
-    p_dir_out <- ""
+    p_dir_out <- "property-analysis/00_output/"
     
     # set input directory
-    p_dir_in_base <- ""
+    p_dir_in_base <- "property-analysis/"
     
   # ============== #
   # URL parameters
@@ -255,14 +256,29 @@
       # Convert list to datatable for faster vectorized operations
       dt.page.holding <- as.data.table(rbindlist(ls.page.holding))
       
+      colnames(dt.page.holding) <- str_replace_all(colnames(dt.page.holding), pattern = " ", replacement = "_")
+      
+      if(nrow(dt.page.holding) < 99){warning(nrow(dt.page.holding), " rows detected. 99 expected. Check integrity of dt.page.holding")}
+      
+      # Export datatable
+      if(p_export == TRUE){write.csv(dt.page.holding, file = paste0(p_dir_out, "00_propertydata"))}
+      
+# =============================================================================
+# ============================ Data Processing  =================================
+# =============================================================================
+    
     # Add Latitude and Longitude data
     dt.geocodes <- geocode(dt.page.holding,
                           address = Location,
                           method = "arcgis",
                           full_results = FALSE # Disabling this feature increases the search speed
                           )
+      # Typically takes ~45 seconds
     
+    # Convert to JSON
+    json.geocodes <- toJSON(dt.geocodes)
     
+    write(json.geocodes, file = paste0("/Users/abhinavskrishnan/vanderbilt-property-visualstory/_data/vanderbilt_properties.json"))
     
 # =============================================================================
 # =============================== WORKSPACE ===================================
