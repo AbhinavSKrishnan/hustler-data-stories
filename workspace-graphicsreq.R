@@ -24,7 +24,7 @@
   # ============== #
   
     library(data.table)
-    library(ggplot2)
+    library(tidyverse)
     library(stringr)
     library(purrr)
     library(ggthemes)
@@ -102,6 +102,38 @@
     custom_save <- function() {
       if(p_export == TRUE) {ggsave(filename = temp.filename, device = "png", path = p_dir_graphics, width = 11.9, height = 7)}
     }
+    
+# =============================================================================
+# =========================== Anti-LGBTQ Bills =================================
+# =============================================================================
+
+    # ============== #
+    # Data Processing
+    # ============== #
+    
+    raw.legislation <- as.data.table(read.csv(file = "graphics-requests/raw_data/raw_long_Anti-LGBTQlegislation.csv"))
+    raw.legislation[, Status := factor(Status, levels = c("Introduced", "Passed First Chamber", "Passed Second Chamber", "Signed into Law"))]
+    
+    raw.legislation <- raw.legislation %>%
+      mutate(Combined_Bill_Name = str_c(Bill.Name, "/", Companian.Bill.Name)) %>% 
+      mutate(Combined_Bill_Name = str_replace_all(Combined_Bill_Name, " ", ""))
+    
+    ggplot(raw.legislation) +
+      geom_point(aes(x = Topic, y = Bill.Name, color = Status)) + 
+      labs(
+        title = "Status of Anti-LGBTQ Legislation in Tennessee",
+        subtitle = "Fourteen bills have been introduced and two have been signed into law",
+        ylab = "Bill Name"
+      ) +
+      coord_flip() +
+      theme.hustler +
+        theme(
+          # panel.grid.major.x = 
+        )
+    
+    write.csv(raw.legislation, file = "graphics-requests/processed_legislation.csv")
+    
+    
     
 # =============================================================================
 # =============================== EDI Story ====================================
