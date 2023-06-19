@@ -239,6 +239,7 @@
         
         # Extract link suffix using regular expression
         link.suffixes <- str_extract(listing.links, "/prc/property/(\\d{5,6})/card/1")
+          # NOTE: this method is not robust to changes in the length of the property codes (currently accepts only 5 or 6 characters inclusive)
         
         # Loop through link suffixes to scrape filings on current page
         for (suffix in link.suffixes) {
